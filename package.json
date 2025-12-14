@@ -1,0 +1,17 @@
+{
+  "name": "prettier-plugin-try-catch-spacing",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^3.7.4",
+    "vitest": "^4.0.15"
+  }
+}

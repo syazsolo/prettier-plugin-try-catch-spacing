@@ -21,7 +21,6 @@ try {
 try {
   const user = await db.find(id);
   return user;
-  // TODO - make this package work then remove this comment
 } catch (error) {
   logger.error(error);
 }
