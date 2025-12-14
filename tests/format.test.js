@@ -11,7 +11,7 @@ const format = async (code, options = {}) => {
 };
 
 describe("prettier-plugin-try-catch-spacing", () => {
-  it("should insert a gap before the closing brace in try block when tryGap is true", async () => {
+  it("should insert a gap before the closing brace in try block when tryCatchSpacing is true", async () => {
     const input = `
 try {
   const result = doSomething();
@@ -28,11 +28,11 @@ try {
   console.error(e);
 }
 `;
-    const result = await format(input, { tryGap: true });
+    const result = await format(input, { tryCatchSpacing: true });
     expect(result).toBe(expected);
   });
 
-  it("should NOT insert a gap when tryGap is false (default)", async () => {
+  it("should NOT insert a gap when tryCatchSpacing is false (default)", async () => {
     const input = `
 try {
   return true;
@@ -42,7 +42,7 @@ try {
   return true;
 } catch (e) {}
 `;
-    const result = await format(input, { tryGap: false });
+    const result = await format(input, { tryCatchSpacing: false });
     expect(result).toBe(expected);
   });
 
@@ -68,7 +68,7 @@ while (true) {
   break;
 }
 `;
-    const result = await format(input, { tryGap: true });
+    const result = await format(input, { tryCatchSpacing: true });
     expect(result).toBe(expected);
   });
 
@@ -88,7 +88,7 @@ try {
 
 } catch (e) {}
 `;
-    const result = await format(input, { tryGap: true });
+    const result = await format(input, { tryCatchSpacing: true });
     expect(result).toBe(expected);
   });
 
@@ -108,7 +108,7 @@ try {
 `;
     // If there is no handler (catch), we generally don't want the gap unless specified.
     // The requirement was: "only when that try block is immediately followed by a catch block."
-    const result = await format(input, { tryGap: true });
+    const result = await format(input, { tryCatchSpacing: true });
     expect(result).toBe(expected);
   });
 
@@ -131,7 +131,7 @@ try {
     // Ideally we skip empty blocks or rely on Prettier's empty block handling.
     // Prettier usually keeps empty blocks as `{}`.
     // Let's test this behavior.
-    const result = await format(input, { tryGap: true });
+    const result = await format(input, { tryCatchSpacing: true });
     // We probably want it to stay concise if empty logic.
     // But if the user wants vertical rhythm, maybe even empty ones?
     // Let's assume for now valid code usually has content in try.

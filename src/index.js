@@ -7,7 +7,7 @@ const { hardline } = doc.builders;
 const defaultPrinter = estreePlugin.printers.estree;
 
 export const options = {
-  tryGap: {
+  tryCatchSpacing: {
     type: "boolean",
     category: "Global",
     default: false,
@@ -48,7 +48,7 @@ const myPrinter = {
 
     // Only modify try block body when tryGap is enabled
     if (
-      options.tryGap &&
+      options.tryCatchSpacing &&
       node.type === "BlockStatement" &&
       parent &&
       parent.type === "TryStatement" &&

@@ -41,13 +41,13 @@ Add the plugin and enable the rule in your `.prettierrc`:
 ```json
 {
   "plugins": ["prettier-plugin-try-catch-spacing"],
-  "tryGap": true
+  "tryCatchSpacing": true
 }
 ```
 
-| Option   | Default | Description                                               |
-| -------- | ------- | --------------------------------------------------------- |
-| `tryGap` | `false` | Inserts a hardline before the closing `}` of a try block. |
+| Option            | Default | Description                                               |
+| ----------------- | ------- | --------------------------------------------------------- |
+| `tryCatchSpacing` | `false` | Inserts a hardline before the closing `}` of a try block. |
 
 ## 🛠️ How It Works
 

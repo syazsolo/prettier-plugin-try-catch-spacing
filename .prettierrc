@@ -1,4 +1,4 @@
 {
   "plugins": ["./src/index.js"],
-  "tryGap": true
+  "tryCatchSpacing": true
 }
