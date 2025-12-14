@@ -1,6 +1,6 @@
 {
   "name": "prettier-plugin-try-catch-spacing",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Enforce visual separation in error handling. A Prettier plugin that automatically injects a whitespace gap before the closing brace of a try block.",
   "type": "module",
   "main": "src/index.js",
