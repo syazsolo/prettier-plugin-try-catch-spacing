@@ -16,31 +16,54 @@ export const options = {
   },
 };
 
-export const printers = {
-  estree: {
-    ...defaultPrinter,
-    print(path, options, print) {
-      const node = path.node;
-      const parent = path.parent;
+const myPrinter = {
+  ...defaultPrinter,
+  print(path, options, print) {
+    const node = path.node;
+    const parent = path.parent;
 
-      // Get the default doc first
-      const defaultDoc = defaultPrinter.print(path, options, print);
+    // Dynamic resolution: Find the appropriate printer to wrap.
+    // We look for the last loaded plugin that handles 'estree', excluding ourselves.
+    let properPrinter = defaultPrinter;
 
-      // Only modify try block body when tryGap is enabled
-      if (
-        options.tryGap &&
-        node.type === "BlockStatement" &&
-        parent &&
-        parent.type === "TryStatement" &&
-        parent.handler && // Must have a catch block
-        parent.block === node // Must be the try block itself
-      ) {
-        return insertGapBeforeClosingBrace(defaultDoc);
+    if (options.plugins) {
+      for (const plugin of options.plugins) {
+        if (plugin.printers && plugin.printers.estree) {
+          const candidate = plugin.printers.estree;
+          // Ensure it's a valid printer object with a print function
+          // and avoid wrapping ourselves (infinite recursion risk)
+          if (
+            candidate !== myPrinter &&
+            typeof candidate === "object" &&
+            typeof candidate.print === "function"
+          ) {
+            properPrinter = candidate;
+          }
+        }
       }
+    }
 
-      return defaultDoc;
-    },
+    // Get the default doc using the resolved printer
+    const defaultDoc = properPrinter.print(path, options, print);
+
+    // Only modify try block body when tryGap is enabled
+    if (
+      options.tryGap &&
+      node.type === "BlockStatement" &&
+      parent &&
+      parent.type === "TryStatement" &&
+      parent.handler && // Must have a catch block
+      parent.block === node // Must be the try block itself
+    ) {
+      return insertGapBeforeClosingBrace(defaultDoc);
+    }
+
+    return defaultDoc;
   },
+};
+
+export const printers = {
+  estree: myPrinter,
 };
 
 function insertGapBeforeClosingBrace(docNode) {
