@@ -6,6 +6,7 @@ A Prettier plugin that automatically injects a whitespace gap before the closing
 
 ## ❌ Before
 
+<!-- prettier-ignore -->
 ```javascript
 try {
   const user = await db.find(id);
@@ -21,6 +22,7 @@ try {
 try {
   const user = await db.find(id);
   return user;
+
 } catch (error) {
   logger.error(error);
 }
