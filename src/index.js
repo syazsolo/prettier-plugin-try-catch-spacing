@@ -1,10 +1,19 @@
-import { doc } from "prettier";
+import { parsers as babelParsers } from "prettier/plugins/babel";
+import { parsers as flowParsers } from "prettier/plugins/flow";
+import { parsers as typescriptParsers } from "prettier/plugins/typescript";
 import * as estreePlugin from "prettier/plugins/estree";
+import { doc } from "prettier";
 
-const { hardline } = doc.builders;
+const { hardline, indent, join } = doc.builders;
 
-// Get the default estree printer directly
-const defaultPrinter = estreePlugin.printers.estree;
+// The fallback base printer
+const basePrinter = estreePlugin.printers.estree;
+console.log("BasePrinter Type:", typeof basePrinter);
+if (typeof basePrinter === "object") {
+  console.log("BasePrinter keys:", Object.keys(basePrinter));
+} else if (typeof basePrinter === "function") {
+  console.log("BasePrinter name:", basePrinter.name);
+}
 
 export const options = {
   tryCatchSpacing: {
@@ -16,82 +25,111 @@ export const options = {
   },
 };
 
-const myPrinter = {
-  ...defaultPrinter,
-  print(path, options, print) {
-    const node = path.node;
-    const parent = path.parent;
+const AST_FORMAT = "estree";
 
-    // Dynamic resolution: Find the appropriate printer to wrap.
-    // We look for the last loaded plugin that handles 'estree', excluding ourselves.
-    let properPrinter = defaultPrinter;
+export const parsers = {
+  babel: babelParsers.babel,
+  "babel-flow": babelParsers["babel-flow"],
+  "babel-ts": babelParsers["babel-ts"],
+  flow: flowParsers.flow,
+  typescript: typescriptParsers.typescript,
+};
 
-    if (options.plugins) {
-      for (const plugin of options.plugins) {
-        if (plugin.printers && plugin.printers.estree) {
-          const candidate = plugin.printers.estree;
-          // Ensure it's a valid printer object with a print function
-          // and avoid wrapping ourselves (infinite recursion risk)
-          if (
-            candidate !== myPrinter &&
-            typeof candidate === "object" &&
-            typeof candidate.print === "function"
-          ) {
-            properPrinter = candidate;
-          }
+// RESOLUTION HELPER
+function getEstreePrinter(options) {
+  let bestCandidate = basePrinter;
+
+  if (options.plugins) {
+    for (const plugin of options.plugins) {
+      if (plugin.printers && plugin.printers.estree) {
+        const candidate = plugin.printers.estree;
+
+        // CRITICAL: Skip ourselves to avoid infinite recursion!
+        if (candidate === printerProxy) continue;
+
+        // The builtin estree printer is an object.
+        // Some "unnamed" plugins (likely internal/parsers) might expose a function that doesn't behave as we expect for 'estree'.
+        // We filter out function printers for 'estree' to be safe, unless valid context suggests otherwise.
+        if (
+          typeof candidate === "object" &&
+          typeof candidate.print === "function"
+        ) {
+          bestCandidate = candidate;
+        } else if (typeof candidate === "function") {
+          // Log a warning if we encounter a function-type printer for 'estree' and skip it.
+          // This is because Prettier's estree printer is typically an object with methods.
+          // console.warn(
+          //   `[prettier-plugin-try-catch] Skipping function-type 'estree' printer from plugin '${plugin.name || "unnamed"}' as it's not the expected object format.`,
+          // );
         }
       }
     }
+  }
+  return bestCandidate;
+}
 
-    // Get the default doc using the resolved printer
-    const defaultDoc = properPrinter.print(path, options, print);
+// PRINTER PROXY definition
+// We use Object.create(basePrinter) to inherit all default behavior/properties (like handleComments, massageAstNode, etc.)
+// and only override what we need.
 
-    // Only modify try block body when tryGap is enabled
+// PRINTER PROXY definition
+const printerProxy = {
+  ...basePrinter,
+
+  print(path, options, print) {
+    const node = path.node;
+
+    // Check for our specific target: The BlockStatement of a TryStatement
     if (
       options.tryCatchSpacing &&
       node.type === "BlockStatement" &&
-      parent &&
-      parent.type === "TryStatement" &&
-      parent.handler && // Must have a catch block
-      parent.block === node // Must be the try block itself
+      path.parent &&
+      path.parent.type === "TryStatement" &&
+      path.parent.handler &&
+      path.parent.block === node
     ) {
-      return insertGapBeforeClosingBrace(defaultDoc);
+      // CRITICAL: Only use manual block construction when body has statements.
+      // If body is empty (possibly with only comments), delegate to basePrinter
+      // to avoid losing dangling comments.
+      if (node.body && node.body.length > 0) {
+        // Manual Block Construction Strategy:
+        // constructing: {
+        //   indent(
+        //     hardline
+        //     join(hardline, body)
+        //   )
+        //   hardline  <- Standard newline
+        //   hardline  <- The Gap (our feature)
+        // }
+        const bodyParts = path.map(print, "body");
+        return [
+          "{",
+          indent([hardline, join(hardline, bodyParts)]),
+          hardline, // Newline after body
+          hardline, // The Gap
+          "}",
+        ];
+      }
+      // For empty blocks (with or without comments), fall through to basePrinter
     }
 
-    return defaultDoc;
+    // Default: Delegate to basePrinter
+    return basePrinter.print.call(basePrinter, path, options, print);
+  },
+
+  embed(path, options) {
+    const printer = getEstreePrinter(options);
+
+    if (printer && typeof printer.embed === "function") {
+      return printer.embed.call(printer, path, options);
+    }
+    if (basePrinter.embed) {
+      return basePrinter.embed.call(basePrinter, path, options);
+    }
+    return null;
   },
 };
 
 export const printers = {
-  estree: myPrinter,
+  [AST_FORMAT]: printerProxy,
 };
-
-function insertGapBeforeClosingBrace(docNode) {
-  // Handle array docs
-  if (Array.isArray(docNode)) {
-    const newDoc = [...docNode];
-    const lastIndex = newDoc.length - 1;
-    if (newDoc[lastIndex] === "}") {
-      newDoc.splice(lastIndex, 0, hardline);
-    }
-    return newDoc;
-  }
-
-  // Handle group docs
-  if (docNode && docNode.type === "group" && Array.isArray(docNode.contents)) {
-    return {
-      ...docNode,
-      contents: insertGapBeforeClosingBrace(docNode.contents),
-    };
-  }
-
-  // Handle other array-like contents
-  if (docNode && Array.isArray(docNode.contents)) {
-    return {
-      ...docNode,
-      contents: insertGapBeforeClosingBrace(docNode.contents),
-    };
-  }
-
-  return docNode;
-}

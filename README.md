@@ -2,15 +2,12 @@
 
 Enforce visual separation in error handling.
 
-A Prettier plugin that automatically injects a whitespace gap before the closing brace of a try block. It separates the "happy path" from error handling, improving scanability and reducing visual density in control flow logic.
-
 ## ❌ Before
 
 <!-- prettier-ignore -->
 ```javascript
 try {
-  const user = await db.find(id);
-  return user;
+  await db.find(id);
 } catch (error) {
   logger.error(error);
 }
@@ -20,8 +17,7 @@ try {
 
 ```javascript
 try {
-  const user = await db.find(id);
-  return user;
+  await db.find(id);
 
 } catch (error) {
   logger.error(error);
@@ -36,7 +32,7 @@ npm install --save-dev prettier prettier-plugin-try-catch-spacing
 
 ## ⚙️ Configuration
 
-Add the plugin and enable the rule in your `.prettierrc`:
+Add to your `.prettierrc`:
 
 ```json
 {
@@ -45,24 +41,18 @@ Add the plugin and enable the rule in your `.prettierrc`:
 }
 ```
 
-| Option            | Default | Description                                               |
-| ----------------- | ------- | --------------------------------------------------------- |
-| `tryCatchSpacing` | `false` | Inserts a hardline before the closing `}` of a try block. |
+<details>
+<summary><strong>Advanced Details & Limitations</strong></summary>
 
-## 🛠️ How It Works
+### How It Works
 
-Unlike standard plugins that transform the AST (Abstract Syntax Tree), this plugin operates at the Printer level.
+This plugin operates at the **Printer** level, intercepting Prettier's `estree` printer to inject a `hardline` into the `BlockStatement` of `try` blocks.
 
-- **Printer Wrapping**: Intercepts Prettier's default estree printer.
-- **Doc Manipulation**: Inspects the intermediate "Doc" structure of BlockStatements within TryStatements.
-- **Layout Injection**: Dynamically inserts a hardline command into the output stream, enforcing vertical rhythm where the default engine forces compaction.
+### Known Limitations
 
-## 🤝 Compatibility
+- **JSX Formatting**: Because this plugin wraps the native printer, Prettier may disable some advanced formatting heuristics for complex JSX (e.g., collapsing mapped arrays instead of breaking them with a trailing comma). The code remains valid but may look slightly different than standard Prettier.
 
-Designed to be polite. This plugin implements a dynamic printer resolution strategy:
-
-- It detects if other AST-transforming plugins (like `prettier-plugin-jsdoc`) are active.
-- It wraps the last active printer in the chain instead of overwriting it, ensuring full interoperability.
+</details>
 
 ## License
 
